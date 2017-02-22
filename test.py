@@ -7,6 +7,7 @@ import jwt
 
 from server import app
 
+PUB_KEY = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
 
 class LedgerJWTServerTestCase(unittest.TestCase):
     def setUp(self):
@@ -51,16 +52,14 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         return int(datetime.strftime("%s"))
 
     def testChallenge(self):
-        pub_key = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
-        signed_challenge = self._request_challenge(pub_key)
+        signed_challenge = self._request_challenge(PUB_KEY)
         challenge = self._get_data_unsafe(signed_challenge)
         self.assertEqual(challenge["aud"], "MS2 challenge")
         self.assertEqual(challenge["iss"], "Neufund")
-        self.assertEqual(challenge["pub_key"], pub_key)
+        self.assertEqual(challenge["pub_key"], PUB_KEY)
 
     def testChallengeTimeout(self):
-        pub_key = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
-        signed_challenge = self._request_challenge(pub_key)
+        signed_challenge = self._request_challenge(PUB_KEY)
         challenge = self._get_data_unsafe(signed_challenge)
         # Actual timeout is 10 seconds
         now_plus_5_sec = self._timestamp(datetime.now() + timedelta(seconds=5))
@@ -68,14 +67,12 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         self.assertIn(challenge["exp"], range(now_plus_5_sec, now_plus_15_sec))
 
     def testChallengeResponse(self):
-        pub_key = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
-        signed_token = self._login(pub_key)
+        signed_token = self._login(PUB_KEY)
         token = self._get_data_unsafe(signed_token)
         self.assertEqual(token['aud'], "MS2")
 
     def testTokenTimeout(self):
-        pub_key = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
-        signed_token = self._login(pub_key)
+        signed_token = self._login(PUB_KEY)
         token = self._get_data_unsafe(signed_token)
         # Actual timeout is 30 minutes
         now_plus_25_min = self._timestamp(datetime.now() + timedelta(minutes=25))
@@ -83,7 +80,6 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         self.assertIn(token['exp'], range(now_plus_25_min, now_plus_35_min))
 
     def testDataFetch(self):
-        pub_key = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
-        signed_token = self._login(pub_key)
+        signed_token = self._login(PUB_KEY)
         data = self._get_user_data(signed_token).decode('utf-8')
-        self.assertEqual(data, pub_key)
+        self.assertEqual(data, PUB_KEY)
