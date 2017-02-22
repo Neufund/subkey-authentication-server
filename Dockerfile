@@ -6,6 +6,7 @@ ENV PYTHONPATH $PYTHONPATH:/urs/src/app
 
 ADD requirements.txt .
 RUN pip install -r requirements.txt
+ADD uwsgi.ini uwsgi.ini
 ADD *.py /usr/src/app/
 
 ENV FLASK_DEBUG 0
@@ -14,4 +15,4 @@ ENV FLASK_APP server
 
 EXPOSE 5000
 
-CMD ["flask", "run"]
+CMD ["uwsgi", "--ini", "uwsgi.ini"]
