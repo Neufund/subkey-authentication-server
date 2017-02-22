@@ -1,13 +1,13 @@
 import json
 import unittest
 from datetime import datetime, timedelta
-from pprint import pprint
 
 import jwt
 
 from server import app
 
 PUB_KEY = "0x45ad9df0526109ba95ca6aa099833c04c9220f19"
+
 
 class LedgerJWTServerTestCase(unittest.TestCase):
     def setUp(self):
