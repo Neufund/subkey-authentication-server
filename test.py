@@ -53,7 +53,9 @@ class LedgerJWTServerTestCase(unittest.TestCase):
 
     def testChallenge(self):
         signed_challenge = self._request_challenge(PUB_KEY)
+        header = jwt.get_unverified_header(signed_challenge)
         challenge = self._get_data_unsafe(signed_challenge)
+        self.assertEqual(header["alg"], "HS512")
         self.assertEqual(challenge["aud"], "Challenge")
         self.assertEqual(challenge["iss"], "Neufund")
         self.assertEqual(challenge["pub_key"], PUB_KEY)
@@ -68,7 +70,9 @@ class LedgerJWTServerTestCase(unittest.TestCase):
 
     def testChallengeResponse(self):
         signed_token = self._login(PUB_KEY)
+        header = jwt.get_unverified_header(signed_token)
         token = self._get_data_unsafe(signed_token)
+        self.assertEqual(header["alg"], "ES512")
         self.assertEqual(token['aud'], "MS2")
 
     def testTokenTimeout(self):
