@@ -9,7 +9,6 @@ python:
 os:
   - linux
   - osx
-  - windows
 # command to install dependencies
 install:
   - "./generate_keys.sh"
