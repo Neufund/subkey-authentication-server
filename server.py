@@ -29,21 +29,22 @@ def challenge():
     return signed
 
 
+def solve_challenge(address, path):
+    with UnQLite(app.config["DB_NAME"]) as db:
+        user_data = json.loads(db[address])
+    x_wallet = Wallet(chain_code=user_data["chainCode"],
+                      public_key=PublicKey.from_hex_key(user_data["pubKey"]))
+    y_path = "/".join(path.split("/")[-3:])
+    return x_wallet.get_child_for_path(y_path).to_address()
+
+
 @app.route('/solution', methods=['POST'])
 @auth.verify_jwt(check=auth.verify_challenged)
 def solution():
     address = request.authorization["address"]
-    full_path = request.authorization["path"]
-    x_y_path = full_path[len(app.config["LEDGER_BASE_PATH"]) + 1:]
-    with UnQLite(app.config["DB_NAME"]) as db:
-        user_data = json.loads(db[address])
-    x_wallet = Wallet(chain_code=user_data["chainCode"],
-               public_key=PublicKey.from_hex_key(user_data["pubKey"]))
-    x_path = user_data["xPath"]
-    assert x_y_path.startswith(x_path)
-    y_path = x_y_path[len(x_path) + 1:]
+    path = request.authorization["path"]
+    expected_address = solve_challenge(address, path)
     submitted_address = request.get_json()["address"]
-    expected_address = x_wallet.get_child_for_path(y_path).to_address()
     # Secure against timing attacks
     if not equals(submitted_address, expected_address):
         raise Unauthorized("Wrong challenge solution")
