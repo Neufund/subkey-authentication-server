@@ -5,8 +5,14 @@ import jwt
 from flask import request
 from werkzeug.exceptions import Forbidden
 
-ALGORITHM = 'HS512'
+ALGORITHM = 'ES512'
 ISSUER = 'Neufund'
+
+with open("ec512.prv.pem", "r") as privateKey:
+    PRIVATE_KEY = privateKey.read()
+
+with open("ec512.pub.pem", "r") as publicKey:
+    PUBLIC_KEY = publicKey.read()
 
 
 def _get_claims(audience, ttl):
@@ -26,14 +32,11 @@ def _get_claims(audience, ttl):
 
 def sign(data, audience, ttl):
     payload = {**data, **_get_claims(audience, ttl)}
-    from server import app
-    return jwt.encode(payload, app.config["JWT_SECRET"], algorithm=ALGORITHM)
+    return jwt.encode(payload, PRIVATE_KEY, algorithm=ALGORITHM)
 
 
 def verify(signed, audience):
-    from server import app
-    return jwt.decode(signed, app.config["JWT_SECRET"],
-                      audience=audience, issuer=ISSUER, algorithms=ALGORITHM)
+    return jwt.decode(signed, PUBLIC_KEY, audience=audience, issuer=ISSUER, algorithms=ALGORITHM)
 
 
 def logged_in(audience=None):
