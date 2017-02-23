@@ -5,6 +5,7 @@ block-io==1.1.6
 cffi==1.9.1
 click==6.7
 cryptography==1.7.2
+Cython==0.25.2
 ecdsa==0.11
 ethereum==1.6.0
 Flask==0.12
