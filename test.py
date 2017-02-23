@@ -54,17 +54,17 @@ class LedgerJWTServerTestCase(unittest.TestCase):
     def testChallenge(self):
         signed_challenge = self._request_challenge(PUB_KEY)
         challenge = self._get_data_unsafe(signed_challenge)
-        self.assertEqual(challenge["aud"], "MS2 challenge")
+        self.assertEqual(challenge["aud"], "Challenge")
         self.assertEqual(challenge["iss"], "Neufund")
         self.assertEqual(challenge["pub_key"], PUB_KEY)
 
     def testChallengeTimeout(self):
         signed_challenge = self._request_challenge(PUB_KEY)
         challenge = self._get_data_unsafe(signed_challenge)
-        # Actual timeout is 10 seconds
-        now_plus_5_sec = self._timestamp(datetime.now() + timedelta(seconds=5))
-        now_plus_15_sec = self._timestamp(datetime.now() + timedelta(seconds=15))
-        self.assertIn(challenge["exp"], range(now_plus_5_sec, now_plus_15_sec))
+        # Actual timeout is 60 seconds
+        now_plus_55_sec = self._timestamp(datetime.now() + timedelta(seconds=55))
+        now_plus_65_sec = self._timestamp(datetime.now() + timedelta(seconds=65))
+        self.assertIn(challenge["exp"], range(now_plus_55_sec, now_plus_65_sec))
 
     def testChallengeResponse(self):
         signed_token = self._login(PUB_KEY)
