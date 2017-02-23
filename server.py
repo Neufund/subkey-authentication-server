@@ -1,6 +1,12 @@
-import random
+import json
+from random import randint
+from streql import equals
+from unqlite import UnQLite
 
 from flask import Flask, request
+from multimerchant.wallet import Wallet
+from multimerchant.wallet.keys import PublicKey
+from werkzeug.exceptions import Unauthorized
 
 import auth
 
@@ -10,11 +16,14 @@ app.config.from_pyfile('config.py')
 
 @app.route('/challenge', methods=['POST'])
 def challenge():
-    pub_key = request.get_json()["pub_key"]
-    challenge_index = random.randint(0, 2 ** 31)
+    address = request.get_json()["address"]
+    y1, y2, y3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
+    with UnQLite(app.config["DB_NAME"]) as db:
+        xPath = json.loads(db[address])["xPath"]
+    yPath = "{}/{}/{}".format(y1, y2, y3)
     data = {
-        "pub_key": pub_key,
-        "challenge_index": challenge_index
+        "address": address,
+        "path": "{}/{}/{}".format(app.config["LEDGER_BASE_PATH"], xPath, yPath)
     }
     signed = auth.sign_challenge(data)
     return signed
@@ -23,16 +32,28 @@ def challenge():
 @app.route('/solution', methods=['POST'])
 @auth.verify_jwt(check=auth.verify_challenged)
 def solution():
-    pub_key = request.authorization["pub_key"]
-    # TODO Verify challenge response
-    return auth.sign_login_credentials({"pub_key": pub_key})
+    address = request.authorization["address"]
+    full_path = request.authorization["path"]
+    x_y_path = full_path[len(app.config["LEDGER_BASE_PATH"]) + 1:]
+    with UnQLite(app.config["DB_NAME"]) as db:
+        user_data = json.loads(db[address])
+    x_wallet = Wallet(chain_code=user_data["chainCode"],
+               public_key=PublicKey.from_hex_key(user_data["pubKey"]))
+    x_path = user_data["xPath"]
+    assert x_y_path.startswith(x_path)
+    y_path = x_y_path[len(x_path) + 1:]
+    submitted_address = request.get_json()["address"]
+    expected_address = x_wallet.get_child_for_path(y_path).to_address()
+    # Secure against timing attacks
+    if not equals(submitted_address, expected_address):
+        raise Unauthorized("Wrong challenge solution")
+    return auth.sign_login_credentials({"address": address})
 
 
 @app.route('/data', methods=["GET"])
 @auth.verify_jwt(check=auth.verify_logged_in)
 def data():
-    pub_key = request.authorization["pub_key"]
-    return pub_key
+    return request.authorization["address"]
 
 
 if __name__ == '__main__':
