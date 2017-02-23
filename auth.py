@@ -1,18 +1,28 @@
-from datetime import datetime
+import random
+import string
+from datetime import datetime, timedelta
 from functools import wraps
 
 import jwt
 from flask import request
 from werkzeug.exceptions import Forbidden
 
-ALGORITHM = 'ES512'
+CHALLENGE_ALGORITHM = 'HS512'
+LOGIN_ALGORITHM = 'ES512'
 ISSUER = 'Neufund'
+CHALLENGE_AUDIENCE = "Challenge"
+MS2_AUDIENCE = "MS2"
 
 with open("ec512.prv.pem", "r") as privateKey:
-    PRIVATE_KEY = privateKey.read()
+    PRIVATE_ECDSA_KEY = privateKey.read()
 
 with open("ec512.pub.pem", "r") as publicKey:
-    PUBLIC_KEY = publicKey.read()
+    PUBLIC_ECDSA_KEY = publicKey.read()
+
+HMAC_KEY_LENGTH = 64
+HMAC_KEY = ''.join(
+    random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+    for _ in range(HMAC_KEY_LENGTH))
 
 
 def _get_claims(audience, ttl):
@@ -30,16 +40,31 @@ def _get_claims(audience, ttl):
     }
 
 
-def sign(data, audience, ttl):
-    payload = {**data, **_get_claims(audience, ttl)}
-    return jwt.encode(payload, PRIVATE_KEY, algorithm=ALGORITHM)
+def sign_challenge(data):
+    payload = {**data, **_get_claims(CHALLENGE_AUDIENCE, timedelta(minutes=1))}
+    return jwt.encode(payload, HMAC_KEY, algorithm=CHALLENGE_ALGORITHM)
 
 
-def verify(signed, audience):
-    return jwt.decode(signed, PUBLIC_KEY, audience=audience, issuer=ISSUER, algorithms=ALGORITHM)
+def sign_login_credentials(data):
+    payload = {**data, **_get_claims(MS2_AUDIENCE, timedelta(minutes=30))}
+    return jwt.encode(payload, PRIVATE_ECDSA_KEY, algorithm=LOGIN_ALGORITHM)
 
 
-def logged_in(audience=None):
+def verify_logged_in(token):
+    return jwt.decode(token, PUBLIC_ECDSA_KEY,
+                      audience=MS2_AUDIENCE,
+                      issuer=ISSUER,
+                      algorithms=LOGIN_ALGORITHM)
+
+
+def verify_challenged(token):
+    return jwt.decode(token, HMAC_KEY,
+                      audience=CHALLENGE_AUDIENCE,
+                      issuer=ISSUER,
+                      algorithms=CHALLENGE_ALGORITHM)
+
+
+def verify_jwt(check=None):
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
@@ -47,7 +72,7 @@ def logged_in(audience=None):
             auth_type, auth_value = auth_header.split()
             if auth_type != "JWT":
                 return Forbidden("JWT required")
-            auth_data = verify(auth_value, audience)
+            auth_data = check(auth_value)
             request.authorization = auth_data
             return f(*args, **kwargs)
 

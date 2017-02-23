@@ -1,5 +1,4 @@
 import random
-from datetime import timedelta
 
 from flask import Flask, request
 
@@ -17,20 +16,20 @@ def challenge():
         "pub_key": pub_key,
         "challenge_index": challenge_index
     }
-    signed = auth.sign(data, audience="MS2 challenge", ttl=timedelta(seconds=10))
+    signed = auth.sign_challenge(data)
     return signed
 
 
 @app.route('/solution', methods=['POST'])
-@auth.logged_in(audience="MS2 challenge")
+@auth.verify_jwt(check=auth.verify_challenged)
 def solution():
     pub_key = request.authorization["pub_key"]
     # TODO Verify challenge response
-    return auth.sign({"pub_key": pub_key}, audience="MS2", ttl=timedelta(minutes=30))
+    return auth.sign_login_credentials({"pub_key": pub_key})
 
 
 @app.route('/data', methods=["GET"])
-@auth.logged_in(audience="MS2")
+@auth.verify_jwt(check=auth.verify_logged_in)
 def data():
     pub_key = request.authorization["pub_key"]
     return pub_key
