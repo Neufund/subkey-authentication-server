@@ -1,0 +1,9 @@
+version: '2'
+services:
+  ledger-jwt-server:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./ec512.prv.pem:/usr/src/app/ec512.prv.pem
+      - ./ec512.pub.pem:/usr/src/app/ec512.pub.pem
