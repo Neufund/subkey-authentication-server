@@ -5,6 +5,7 @@ WORKDIR /usr/src/app
 ENV PYTHONPATH $PYTHONPATH:/urs/src/app
 
 ADD requirements.txt .
+RUN pip install Cython
 RUN pip install -r requirements.txt
 ADD uwsgi.ini uwsgi.ini
 ADD *.py /usr/src/app/
