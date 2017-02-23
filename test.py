@@ -55,7 +55,7 @@ class LedgerJWTServerTestCase(unittest.TestCase):
     def _solve_challenge(self, jwt, response_address):
         jwt = jwt.decode('utf-8')
         return self.app.post(
-            '/solution',
+            '/response',
             data=json.dumps({"address": response_address}),
             headers={"Authorization": "JWT {}".format(jwt)},
             content_type='application/json'

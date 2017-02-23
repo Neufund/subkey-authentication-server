@@ -38,9 +38,9 @@ def solve_challenge(address, path):
     return x_wallet.get_child_for_path(y_path).to_address()
 
 
-@app.route('/solution', methods=['POST'])
+@app.route('/response', methods=['POST'])
 @auth.verify_jwt(check=auth.verify_challenged)
-def solution():
+def response():
     address = request.authorization["address"]
     path = request.authorization["path"]
     expected_address = solve_challenge(address, path)
