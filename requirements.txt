@@ -1,4 +1,4 @@
-appdirs==1.4.0
+appdirs==1.4.2
 base58==0.2.1
 bitcoin==1.1.42
 block-io==1.1.6

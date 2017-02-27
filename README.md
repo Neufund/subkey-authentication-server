@@ -19,7 +19,7 @@ Ledger JWT auth server
 
 ### Admin endpoints
 
-* Start registration (requires valid LOGIN_TOKEN)
+* Start registration (requires LOGIN_TOKEN)
     * `POST /start_registration {"base_address_hash": BASE_ADDRESS_HASH}`
     * `200 text/html REGISTRATION_TOKEN`
         * base_address_hash
@@ -45,3 +45,8 @@ Ledger JWT auth server
 ### Additional info
 
 * Hash function used for address hashes is `sha3_256`, that's why `python3.6` is used
+
+### Troubleshooting
+* `#include <openssl/aes.h>` not found while installing dependencies
+    * https://github.com/pyca/cryptography/issues/2350
+    * This is due to Apple dropping support for OpenSSL and moving to their own library.
