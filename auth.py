@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 
 import jwt
@@ -24,13 +24,15 @@ def _get_claims(audience, ttl):
 
 def sign_challenge(data):
     from server import app
-    payload = {**data, **_get_claims(app.config['CHALLENGE_AUDIENCE'], timedelta(minutes=1))}
+    payload = {**data, **_get_claims(app.config['CHALLENGE_AUDIENCE'],
+                                     app.config['CHALLENGE_TOKEN_LIFE_TIME'])}
     return jwt.encode(payload, app.config['HMAC_KEY'], algorithm=app.config['CHALLENGE_ALGORITHM'])
 
 
 def sign_login_credentials(data):
     from server import app
-    payload = {**data, **_get_claims(app.config['MS2_AUDIENCE'], timedelta(minutes=30))}
+    payload = {**data,
+               **_get_claims(app.config['MS2_AUDIENCE'], app.config["LOGIN_TOKEN_LIFE_TIME"])}
     return jwt.encode(payload, app.config['PRIVATE_ECDSA_KEY'],
                       algorithm=app.config['LOGIN_ALGORITHM'])
 

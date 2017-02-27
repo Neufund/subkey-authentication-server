@@ -1,5 +1,6 @@
 import random
 import string
+from datetime import timedelta
 
 LEDGER_BASE_PATH = "m/44'/60'/0'"
 DB_NAME = 'main.db'
@@ -16,6 +17,9 @@ HMAC_KEY_LENGTH = 64
 HMAC_KEY = ''.join(
     random.SystemRandom().choice(string.ascii_uppercase + string.digits)
     for _ in range(HMAC_KEY_LENGTH))
+
+CHALLENGE_TOKEN_LIFE_TIME = timedelta(minutes=1)
+LOGIN_TOKEN_LIFE_TIME = timedelta(minutes=30)
 
 PRIVATE_ECDSA_KEY = None
 PUBLIC_ECDSA_KEY = None

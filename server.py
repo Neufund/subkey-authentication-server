@@ -47,11 +47,5 @@ def response():
     return auth.sign_login_credentials({"address": address})
 
 
-@app.route('/data', methods=["GET"])
-@auth.verify_jwt(check=auth.verify_logged_in)
-def data():
-    return request.authorization["address"]
-
-
 if __name__ == '__main__':
     app.run()

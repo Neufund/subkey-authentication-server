@@ -97,8 +97,3 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         now_plus_25_min = self._timestamp(datetime.now() + timedelta(minutes=25))
         now_plus_35_min = self._timestamp(datetime.now() + timedelta(minutes=35))
         self.assertIn(token['exp'], range(now_plus_25_min, now_plus_35_min))
-
-    def testDataFetch(self):
-        signed_token = self._login(ADDRESS)
-        data = self._get_user_data(signed_token).decode('utf-8')
-        self.assertEqual(data, ADDRESS)
