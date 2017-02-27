@@ -5,5 +5,6 @@ services:
     ports:
       - "5000:5000"
     volumes:
+      - ./main.db:/usr/src/app/main.db
       - ./ec512.prv.pem:/usr/src/app/ec512.prv.pem
       - ./ec512.pub.pem:/usr/src/app/ec512.pub.pem
