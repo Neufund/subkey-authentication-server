@@ -26,7 +26,7 @@ def challenge():
     return auth.sign_challenge(challenge_data)
 
 
-def solve_challenge(address, path):
+def _solve_challenge(address, path):
     user_data = db.get(address)
     x_wallet = Wallet(chain_code=user_data["chainCode"],
                       public_key=PublicKey.from_hex_key(user_data["pubKey"]))
@@ -39,7 +39,7 @@ def solve_challenge(address, path):
 def response():
     base_address_hash = request.authorization["base_address_hash"]
     path = request.authorization["path"]
-    expected_address = solve_challenge(base_address_hash, path)
+    expected_address = _solve_challenge(base_address_hash, path)
     submitted_address = request.get_json()["address"]
     # Secure against timing attacks
     if not equals(submitted_address, expected_address):
