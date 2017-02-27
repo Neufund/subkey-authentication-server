@@ -23,7 +23,6 @@ PUBLIC_ECDSA_KEY = None
 
 def read_keys():
     global PRIVATE_ECDSA_KEY, PUBLIC_ECDSA_KEY
-    from server import app
     with open(PRIV_KEY_PATH, "r") as privateKey:
         PRIVATE_ECDSA_KEY = privateKey.read()
     with open(PUB_KEY_PATH, "r") as publicKey:
