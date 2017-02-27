@@ -13,7 +13,7 @@ BASE_PATH = "m/44'/60'/0'"
 TEST_DB = "test.json"
 
 
-class LedgerJWTServerTestCase(unittest.TestCase):
+class LedgerJWTServerTestsBase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         app.config["DB_NAME"] = TEST_DB
@@ -67,6 +67,8 @@ class LedgerJWTServerTestCase(unittest.TestCase):
     def _timestamp(time):
         return int(time.strftime("%s"))
 
+
+class ChallengeResponseTests(LedgerJWTServerTestsBase):
     def testChallenge(self):
         signed_challenge = self._request_challenge()
         header = jwt.get_unverified_header(signed_challenge)
@@ -99,3 +101,7 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         now_plus_25_min = self._timestamp(datetime.now() + timedelta(minutes=25))
         now_plus_35_min = self._timestamp(datetime.now() + timedelta(minutes=35))
         self.assertIn(token['exp'], range(now_plus_25_min, now_plus_35_min))
+
+
+class AdminTests(LedgerJWTServerTestsBase):
+    pass
