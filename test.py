@@ -2,13 +2,12 @@ import json
 import os
 import unittest
 from datetime import datetime, timedelta
-from random import randint
-from unqlite import UnQLite
 
 import jwt
 from multimerchant.wallet import Wallet
 from multimerchant.wallet.keys import PublicKey
 
+import db
 from server import app
 
 PUB_KEY = "04d3c41fb2f0e07d71f10416717e450bceb635d54d9b07dea0327f90bfa82f0da08b40aaf" \
@@ -22,17 +21,7 @@ TEST_DB = "test.db"
 
 class LedgerJWTServerTestCase(unittest.TestCase):
     def createFixture(self):
-        with UnQLite(TEST_DB) as db:
-            x1, x2, x3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
-            xPath = "{}/{}/{}".format(x1, x2, x3)
-            x_child = WALLET.get_child_for_path(xPath)
-            x_child.get_public_key_hex(False)
-            value = {
-                "xPath": xPath,
-                "pubKey": x_child.get_public_key_hex(False).decode('utf-8'),
-                "chainCode": x_child.chain_code.decode('utf-8')
-            }
-            db[ADDRESS] = json.dumps(value)
+        db.load_fixture("test-ledger.json", TEST_DB, append=False)
 
     def setUp(self):
         self.app = app.test_client()
