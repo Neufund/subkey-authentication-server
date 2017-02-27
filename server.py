@@ -21,12 +21,11 @@ def challenge():
     with UnQLite(app.config["DB_NAME"]) as db:
         xPath = json.loads(db[address])["xPath"]
     yPath = "{}/{}/{}".format(y1, y2, y3)
-    data = {
+    challenge_data = {
         "address": address,
         "path": "{}/{}/{}".format(app.config["LEDGER_BASE_PATH"], xPath, yPath)
     }
-    signed = auth.sign_challenge(data)
-    return signed
+    return auth.sign_challenge(challenge_data)
 
 
 def solve_challenge(address, path):

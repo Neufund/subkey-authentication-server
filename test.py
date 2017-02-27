@@ -38,20 +38,20 @@ class LedgerJWTServerTestCase(unittest.TestCase):
             content_type='application/json'
         ).data
 
-    def _solve_challenge(self, jwt, response_address):
-        jwt = jwt.decode('utf-8')
+    def _solve_challenge(self, token, response_address):
+        token = token.decode('utf-8')
         return self.app.post(
             '/response',
             data=json.dumps({"address": response_address}),
-            headers={"Authorization": "JWT {}".format(jwt)},
+            headers={"Authorization": "JWT {}".format(token)},
             content_type='application/json'
         ).data
 
-    def _get_user_data(self, jwt):
-        jwt = jwt.decode('utf-8')
+    def _get_user_data(self, token):
+        token = token.decode('utf-8')
         return self.app.get(
             '/data',
-            headers={"Authorization": "JWT {}".format(jwt)},
+            headers={"Authorization": "JWT {}".format(token)},
             content_type='application/json'
         ).data
 
@@ -72,8 +72,8 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         return self._solve_challenge(signed_challenge, address)
 
     @staticmethod
-    def _timestamp(datetime):
-        return int(datetime.strftime("%s"))
+    def _timestamp(time):
+        return int(time.strftime("%s"))
 
     def testChallenge(self):
         signed_challenge = self._request_challenge(ADDRESS)
