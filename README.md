@@ -8,7 +8,7 @@ Ledger JWT auth server
     * Create virtualenv: `virtualenv -p python3.6 venv`
     * Enter virtualenv: `. venv/bin/activate`
     * Install dependencies: `pip install -r requirements.txt`
-    * Run tests: `py.test test.py`
+    * Run tests: `py.test`
     * Run server with reloading: `FLASK_DEBUG=1 FLASK_APP=server flask run`
 * On PROD:
     * Load ECDSA keys from somewhere
