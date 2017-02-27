@@ -1,5 +1,4 @@
 import json
-import os
 import unittest
 from datetime import datetime, timedelta
 
@@ -7,7 +6,6 @@ import jwt
 from multimerchant.wallet import Wallet
 from multimerchant.wallet.keys import PublicKey
 
-import db
 from server import app
 
 PUB_KEY = "04d3c41fb2f0e07d71f10416717e450bceb635d54d9b07dea0327f90bfa82f0da08b40aaf" \
@@ -16,20 +14,13 @@ CHAIN_CODE = "7e08e87e875b9f6bfde7e4a2ab6b52b6c3229bf5b8ac9856487d532bbdaaaee8"
 ADDRESS = "0x670884349DD0E57bd1bb71bB6913E921846ba149"
 WALLET = Wallet(chain_code=CHAIN_CODE, public_key=PublicKey.from_hex_key(PUB_KEY))
 BASE_PATH = "m/44'/60'/0'"
-TEST_DB = "test.db"
+TEST_DB = "test.json"
 
 
 class LedgerJWTServerTestCase(unittest.TestCase):
-    def createFixture(self):
-        db.load_fixture("test-ledger.json", TEST_DB, append=False)
-
     def setUp(self):
         self.app = app.test_client()
         app.config["DB_NAME"] = TEST_DB
-        self.createFixture()
-
-    def tearDown(self):
-        os.remove(TEST_DB)
 
     def _request_challenge(self, address):
         return self.app.post(

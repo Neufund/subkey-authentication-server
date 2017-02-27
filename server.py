@@ -1,7 +1,5 @@
-import json
 from random import randint
 from streql import equals
-from unqlite import UnQLite
 
 from flask import Flask, request
 from multimerchant.wallet import Wallet
@@ -9,6 +7,7 @@ from multimerchant.wallet.keys import PublicKey
 from werkzeug.exceptions import Unauthorized
 
 import auth
+import db
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -18,8 +17,7 @@ app.config.from_pyfile('config.py')
 def challenge():
     address = request.get_json()["address"]
     y1, y2, y3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
-    with UnQLite(app.config["DB_NAME"]) as db:
-        xPath = json.loads(db[address])["xPath"]
+    xPath = db.get(address)["xPath"]
     yPath = "{}/{}/{}".format(y1, y2, y3)
     challenge_data = {
         "address": address,
@@ -29,8 +27,7 @@ def challenge():
 
 
 def solve_challenge(address, path):
-    with UnQLite(app.config["DB_NAME"]) as db:
-        user_data = json.loads(db[address])
+    user_data = db.get(address)
     x_wallet = Wallet(chain_code=user_data["chainCode"],
                       public_key=PublicKey.from_hex_key(user_data["pubKey"]))
     y_path = "/".join(path.split("/")[-3:])

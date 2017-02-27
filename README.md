@@ -12,7 +12,6 @@ Ledger JWT auth server
 * On PROD:
     * Load ECDSA keys from somewhere
     * Load DB data to `prod-data.json` from somewhere
-    * Load data to DB: `./load_data.py prod-data.json main.db`
     * Run server: `docker-compose up -d`
 
 ## API
