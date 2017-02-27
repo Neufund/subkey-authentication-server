@@ -22,6 +22,14 @@ def _get_claims(audience, ttl):
     }
 
 
+def sign_start_registration(data):
+    from server import app
+    payload = {**data, **_get_claims(app.config['REGISTRATION_AUDIENCE'],
+                                     app.config['REGISTRATION_TOKEN_LIFE_TIME'])}
+    return jwt.encode(payload, app.config['HMAC_KEY'],
+                      algorithm=app.config['REGISTRATION_ALGORITHM'])
+
+
 def sign_challenge(data):
     from server import app
     payload = {**data, **_get_claims(app.config['CHALLENGE_AUDIENCE'],
@@ -35,6 +43,14 @@ def sign_login_credentials(data):
                **_get_claims(app.config['MS2_AUDIENCE'], app.config["LOGIN_TOKEN_LIFE_TIME"])}
     return jwt.encode(payload, app.config['PRIVATE_ECDSA_KEY'],
                       algorithm=app.config['LOGIN_ALGORITHM'])
+
+
+def verify_registration_started(token):
+    from server import app
+    return jwt.decode(token, app.config['HMAC_KEY'],
+                      audience=app.config['REGISTRATION_AUDIENCE'],
+                      issuer=app.config['ISSUER'],
+                      algorithms=app.config['REGISTRATION_ALGORITHM'])
 
 
 def verify_logged_in(token):

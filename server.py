@@ -13,6 +13,35 @@ app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
 
+@app.route('/start_registration', methods=['POST'])
+@auth.verify_jwt(check=auth.verify_logged_in)
+def start_registration():
+    base_address_hash = request.get_json()["base_address_hash"]
+    x1, x2, x3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
+    xPath = "{}/{}/{}".format(x1, x2, x3)
+    challenge_data = {
+        "base_address_hash": base_address_hash,
+        "path": "{}/{}".format(app.config["LEDGER_BASE_PATH"], xPath)
+    }
+    return auth.sign_start_registration(challenge_data)
+
+
+@app.route('/register', methods=['POST'])
+@auth.verify_jwt(check=auth.verify_registration_started)
+def register():
+    base_address_hash = request.authorization["base_address_hash"]
+    path = request.authorization["path"]
+    data = request.get_json()
+    pubKey = data["x_pub_key"]
+    chainCode = data["x_chain_code"]
+    db.put(base_address_hash, {
+        "chainCode": chainCode,
+        "pubKey": pubKey,
+        "xPath": path
+    })
+    return base_address_hash
+
+
 @app.route('/challenge', methods=['POST'])
 def challenge():
     base_address_hash = request.get_json()["base_address_hash"]
