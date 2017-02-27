@@ -38,9 +38,6 @@ Ledger JWT auth server
 * Response (requires CHALLENGE_TOKEN)
     * `POST /response {"address": SOLUTION_ADDRESS}`
     * `200 text/html LOGIN_TOKEN`
-* Data (requires LOGIN_TOKEN)
-    * `GET /data`
-    * `200 text/html USER_DATA`
 
 ### Additional info
 
