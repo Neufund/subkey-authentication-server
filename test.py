@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from datetime import datetime, timedelta
 from random import randint
@@ -20,9 +21,6 @@ TEST_DB = "test.db"
 
 
 class LedgerJWTServerTestCase(unittest.TestCase):
-    def resetDB(self):
-        open(TEST_DB, 'w').close()
-
     def createFixture(self):
         with UnQLite(TEST_DB) as db:
             x1, x2, x3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
@@ -39,11 +37,10 @@ class LedgerJWTServerTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         app.config["DB_NAME"] = TEST_DB
-        self.resetDB()
         self.createFixture()
 
     def tearDown(self):
-        self.resetDB()
+        os.remove(TEST_DB)
 
     def _request_challenge(self, address):
         return self.app.post(
