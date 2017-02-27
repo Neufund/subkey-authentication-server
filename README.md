@@ -23,7 +23,7 @@ Ledger JWT auth server
     * `POST /start_registration {"base_address_hash": BASE_ADDRESS_HASH}`
     * `200 text/html REGISTRATION_TOKEN`
         * base_address_hash
-        * x_path
+        * path
 * Registration (requires REGISTRATION_TOKEN)
     * `POST /register {"x_chain_code": X_CHAIN_CODE, "x_pub_key": X_PUB_KEY}`
     * `200 test/html BASE_ADDRESS_HASH`
@@ -38,6 +38,7 @@ Ledger JWT auth server
 * Response (requires CHALLENGE_TOKEN)
     * `POST /response {"address": SOLUTION_ADDRESS}`
     * `200 text/html LOGIN_TOKEN`
+        * base_address_hash
 
 ### Additional info
 

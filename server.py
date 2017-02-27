@@ -15,12 +15,12 @@ app.config.from_pyfile('config.py')
 
 @app.route('/challenge', methods=['POST'])
 def challenge():
-    address = request.get_json()["address"]
+    base_address_hash = request.get_json()["base_address_hash"]
     y1, y2, y3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
-    xPath = db.get(address)["xPath"]
+    xPath = db.get(base_address_hash)["xPath"]
     yPath = "{}/{}/{}".format(y1, y2, y3)
     challenge_data = {
-        "address": address,
+        "base_address_hash": base_address_hash,
         "path": "{}/{}/{}".format(app.config["LEDGER_BASE_PATH"], xPath, yPath)
     }
     return auth.sign_challenge(challenge_data)
@@ -37,14 +37,14 @@ def solve_challenge(address, path):
 @app.route('/response', methods=['POST'])
 @auth.verify_jwt(check=auth.verify_challenged)
 def response():
-    address = request.authorization["address"]
+    base_address_hash = request.authorization["base_address_hash"]
     path = request.authorization["path"]
-    expected_address = solve_challenge(address, path)
+    expected_address = solve_challenge(base_address_hash, path)
     submitted_address = request.get_json()["address"]
     # Secure against timing attacks
     if not equals(submitted_address, expected_address):
         raise Unauthorized("Wrong challenge solution")
-    return auth.sign_login_credentials({"address": address})
+    return auth.sign_login_credentials({"base_address_hash": base_address_hash})
 
 
 if __name__ == '__main__':

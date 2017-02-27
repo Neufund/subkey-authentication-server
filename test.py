@@ -6,13 +6,9 @@ import jwt
 from multimerchant.wallet import Wallet
 from multimerchant.wallet.keys import PublicKey
 
+import db
 from server import app
 
-PUB_KEY = "04d3c41fb2f0e07d71f10416717e450bceb635d54d9b07dea0327f90bfa82f0da08b40aaf" \
-          "d480811d4aba8c17fa768765c6a897009e000f9249c299724fd567414"
-CHAIN_CODE = "7e08e87e875b9f6bfde7e4a2ab6b52b6c3229bf5b8ac9856487d532bbdaaaee8"
-ADDRESS = "0x670884349DD0E57bd1bb71bB6913E921846ba149"
-WALLET = Wallet(chain_code=CHAIN_CODE, public_key=PublicKey.from_hex_key(PUB_KEY))
 BASE_PATH = "m/44'/60'/0'"
 TEST_DB = "test.json"
 
@@ -21,11 +17,15 @@ class LedgerJWTServerTestCase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         app.config["DB_NAME"] = TEST_DB
+        self.base_address_hash = "01b0021097fc768ec42c1828be5131e18b479ab210224122e467f144018396df"
+        test_data = db.get(self.base_address_hash)
+        self.x_wallet = Wallet(chain_code=test_data["chainCode"],
+                               public_key=PublicKey.from_hex_key(test_data["pubKey"]))
 
-    def _request_challenge(self, address):
+    def _request_challenge(self):
         return self.app.post(
             '/challenge',
-            data=json.dumps({"address": address}),
+            data=json.dumps({"base_address_hash": self.base_address_hash}),
             content_type='application/json'
         ).data
 
@@ -53,13 +53,14 @@ class LedgerJWTServerTestCase(unittest.TestCase):
             'verify_aud': False
         })
 
-    def _login(self, address):
-        signed_challenge = self._request_challenge(address)
+    def _login(self):
+        signed_challenge = self._request_challenge()
         challenge = self._get_data_unsafe(signed_challenge)
         path = challenge["path"]
         self.assertEqual(path[:len(BASE_PATH)], BASE_PATH)
-        path = path[len(BASE_PATH) + 1:]
-        address = WALLET.get_child_for_path(path).to_address()
+        x_y_path = path[len(BASE_PATH) + 1:]
+        y_path = "/".join(x_y_path.split('/')[3:])
+        address = self.x_wallet.get_child_for_path(y_path).to_address()
         return self._solve_challenge(signed_challenge, address)
 
     @staticmethod
@@ -67,16 +68,17 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         return int(time.strftime("%s"))
 
     def testChallenge(self):
-        signed_challenge = self._request_challenge(ADDRESS)
+        signed_challenge = self._request_challenge()
         header = jwt.get_unverified_header(signed_challenge)
         challenge = self._get_data_unsafe(signed_challenge)
         self.assertEqual(header["alg"], "HS512")
         self.assertEqual(challenge["aud"], "Challenge")
         self.assertEqual(challenge["iss"], "Neufund")
-        self.assertEqual(challenge["address"], ADDRESS)
+        self.assertEqual(challenge["base_address_hash"], self.base_address_hash)
+        self.assertIn("path", challenge)
 
     def testChallengeTimeout(self):
-        signed_challenge = self._request_challenge(ADDRESS)
+        signed_challenge = self._request_challenge()
         challenge = self._get_data_unsafe(signed_challenge)
         # Actual timeout is 60 seconds
         now_plus_55_sec = self._timestamp(datetime.now() + timedelta(seconds=55))
@@ -84,14 +86,14 @@ class LedgerJWTServerTestCase(unittest.TestCase):
         self.assertIn(challenge["exp"], range(now_plus_55_sec, now_plus_65_sec))
 
     def testChallengeResponse(self):
-        signed_token = self._login(ADDRESS)
+        signed_token = self._login()
         header = jwt.get_unverified_header(signed_token)
         token = self._get_data_unsafe(signed_token)
         self.assertEqual(header["alg"], "ES512")
         self.assertEqual(token['aud'], "MS2")
 
     def testTokenTimeout(self):
-        signed_token = self._login(ADDRESS)
+        signed_token = self._login()
         token = self._get_data_unsafe(signed_token)
         # Actual timeout is 30 minutes
         now_plus_25_min = self._timestamp(datetime.now() + timedelta(minutes=25))
