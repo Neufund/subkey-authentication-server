@@ -2,9 +2,10 @@
 Ledger JWT auth server
 
 ## Setup
+
 * On DEV:
     * Generate ECDSA keys by running `./generate_keys.sh`
-    * Create virtualenv: `virtualenv venv`
+    * Create virtualenv: `virtualenv -p python3.6 venv`
     * Enter virtualenv: `. venv/bin/activate`
     * Install dependencies: `pip install -r requirements.txt`
     * Run tests: `py.test test.py`
@@ -15,12 +16,32 @@ Ledger JWT auth server
     * Run server: `docker-compose up -d`
 
 ## API
+
+### Admin endpoints
+
+* Start registration (requires valid LOGIN_TOKEN)
+    * `POST /start_registration {"base_address_hash": BASE_ADDRESS_HASH}`
+    * `200 text/html REGISTRATION_TOKEN`
+        * base_address_hash
+        * x_path
+* Registration (requires REGISTRATION_TOKEN)
+    * `POST /register {"x_chain_code": X_CHAIN_CODE, "x_pub_key": X_PUB_KEY}`
+    * `200 test/html BASE_ADDRESS_HASH`
+
+### User endpoints
+
 * Challenge
-    * `POST /challenge {"address": BASE_ADDRESS}`
+    * `POST /challenge {"base_address_hash": BASE_ADDRESS_HASH}`
     * `200 text/html CHALLENGE_TOKEN`
+        * x_path
+        * y_path
 * Response (requires CHALLENGE_TOKEN)
     * `POST /response {"address": SOLUTION_ADDRESS}`
     * `200 text/html LOGIN_TOKEN`
 * Data (requires LOGIN_TOKEN)
     * `GET /data`
     * `200 text/html USER_DATA`
+
+### Additional info
+
+* Hash function used for address hashes is `sha3_256`, that's why `python3.6` is used
