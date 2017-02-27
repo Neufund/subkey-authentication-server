@@ -1,5 +1,3 @@
-import random
-import string
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -7,32 +5,16 @@ import jwt
 from flask import request
 from werkzeug.exceptions import Forbidden
 
-CHALLENGE_ALGORITHM = 'HS512'
-LOGIN_ALGORITHM = 'ES512'
-ISSUER = 'Neufund'
-CHALLENGE_AUDIENCE = "Challenge"
-MS2_AUDIENCE = "MS2"
-
-with open("ec512.prv.pem", "r") as privateKey:
-    PRIVATE_ECDSA_KEY = privateKey.read()
-
-with open("ec512.pub.pem", "r") as publicKey:
-    PUBLIC_ECDSA_KEY = publicKey.read()
-
-HMAC_KEY_LENGTH = 64
-HMAC_KEY = ''.join(
-    random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-    for _ in range(HMAC_KEY_LENGTH))
-
 
 def _get_claims(audience, ttl):
+    from server import app
     return {
         # Expiration Time Claim
         'exp': datetime.utcnow() + ttl,
         # Not Before Time Claim
         'nbf': datetime.utcnow(),
         # Issuer Claim
-        'iss': 'Neufund',
+        'iss': app.config['ISSUER'],
         # Audience Claim
         'aud': audience,
         # Issued At Claim
@@ -41,27 +23,32 @@ def _get_claims(audience, ttl):
 
 
 def sign_challenge(data):
-    payload = {**data, **_get_claims(CHALLENGE_AUDIENCE, timedelta(minutes=1))}
-    return jwt.encode(payload, HMAC_KEY, algorithm=CHALLENGE_ALGORITHM)
+    from server import app
+    payload = {**data, **_get_claims(app.config['CHALLENGE_AUDIENCE'], timedelta(minutes=1))}
+    return jwt.encode(payload, app.config['HMAC_KEY'], algorithm=app.config['CHALLENGE_ALGORITHM'])
 
 
 def sign_login_credentials(data):
-    payload = {**data, **_get_claims(MS2_AUDIENCE, timedelta(minutes=30))}
-    return jwt.encode(payload, PRIVATE_ECDSA_KEY, algorithm=LOGIN_ALGORITHM)
+    from server import app
+    payload = {**data, **_get_claims(app.config['MS2_AUDIENCE'], timedelta(minutes=30))}
+    return jwt.encode(payload, app.config['PRIVATE_ECDSA_KEY'],
+                      algorithm=app.config['LOGIN_ALGORITHM'])
 
 
 def verify_logged_in(token):
-    return jwt.decode(token, PUBLIC_ECDSA_KEY,
-                      audience=MS2_AUDIENCE,
-                      issuer=ISSUER,
-                      algorithms=LOGIN_ALGORITHM)
+    from server import app
+    return jwt.decode(token, app.config['PUBLIC_ECDSA_KEY'],
+                      audience=app.config['MS2_AUDIENCE'],
+                      issuer=app.config['ISSUER'],
+                      algorithms=app.config['LOGIN_ALGORITHM'])
 
 
 def verify_challenged(token):
-    return jwt.decode(token, HMAC_KEY,
-                      audience=CHALLENGE_AUDIENCE,
-                      issuer=ISSUER,
-                      algorithms=CHALLENGE_ALGORITHM)
+    from server import app
+    return jwt.decode(token, app.config['HMAC_KEY'],
+                      audience=app.config['CHALLENGE_AUDIENCE'],
+                      issuer=app.config['ISSUER'],
+                      algorithms=app.config['CHALLENGE_ALGORITHM'])
 
 
 def verify_jwt(check=None):
