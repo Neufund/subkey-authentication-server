@@ -17,7 +17,6 @@ mccabe==0.6.1
 multimerchant==0.0.1
 packaging==16.8
 pbkdf2==1.3
-pickleDB==0.6.2
 py==1.4.32
 pyasn1==0.2.2
 pycodestyle==2.3.1
