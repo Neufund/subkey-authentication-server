@@ -25,24 +25,22 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
             '/challenge',
             data=json.dumps({"base_address_hash": base_address_hash}),
             content_type='application/json'
-        ).data
+        ).data.decode("utf-8")
 
     def _solve_challenge(self, token, response_address):
-        token = token.decode('utf-8')
         return self.app.post(
             '/response',
             data=json.dumps({"address": response_address}),
             headers={"Authorization": "JWT {}".format(token)},
             content_type='application/json'
-        ).data
+        ).data.decode("utf-8")
 
     def _get_user_data(self, token):
-        token = token.decode('utf-8')
         return self.app.get(
             '/data',
             headers={"Authorization": "JWT {}".format(token)},
             content_type='application/json'
-        ).data
+        ).data.decode("utf-8")
 
     @staticmethod
     def _get_data_unsafe(signed):
@@ -59,7 +57,7 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
         x_y_path = path[len(BASE_PATH) + 1:]
         y_path = "/".join(x_y_path.split('/')[3:])
         address = x_wallet.get_child_for_path(y_path).to_address()
-        return self._solve_challenge(signed_challenge, address).decode("utf-8")
+        return self._solve_challenge(signed_challenge, address)
 
     @staticmethod
     def _timestamp(time):
@@ -126,9 +124,11 @@ class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
         admin_x_wallet = Wallet(chain_code=test_data["chainCode"],
                                 public_key=PublicKey.from_hex_key(test_data["pubKey"]))
         self.token = self._login(admin_base_address_hash, admin_x_wallet)
-        self.new_wallet = Wallet.new_random_wallet().get_child_for_path(LEDGER_BASE_PATH)
-        self.base_address_hash = hashlib.sha3_256(
-            self.new_wallet.to_address().encode("utf-8")).hexdigest()
+        self.new_wallet = Wallet.new_random_wallet()
+        base_address = self.new_wallet \
+            .get_child_for_path(LEDGER_BASE_PATH) \
+            .to_address().encode("utf-8")
+        self.base_address_hash = hashlib.sha3_256(base_address).hexdigest()
 
     def _start_registration(self, token, base_address_hash):
         return self.app.post(
@@ -136,7 +136,24 @@ class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
             data=json.dumps({"base_address_hash": base_address_hash}),
             headers={"Authorization": "JWT {}".format(token)},
             content_type='application/json'
-        ).data
+        ).data.decode("utf-8")
+
+    def _register(self, registration_token, pub_key, chain_code):
+        return self.app.post(
+            '/register',
+            data=json.dumps({"x_pub_key": pub_key,
+                             "x_chain_code": chain_code}),
+            headers={"Authorization": "JWT {}".format(registration_token)},
+            content_type='application/json'
+        ).data.decode("utf-8")
+
+    def _register_new_wallet(self, base_address_hash, wallet):
+        registration_token = self._start_registration(self.token, base_address_hash)
+        path = self._get_data_unsafe(registration_token)["path"]
+        child_wallet = wallet.get_child_for_path(path)
+        chain_code = child_wallet.chain_code.decode("utf-8")
+        pub_key = child_wallet.public_key.get_key().decode("utf-8")
+        return self._register(registration_token, pub_key, chain_code)
 
     def testStartRegistrationToken(self):
         registration_token = self._start_registration(self.token, self.base_address_hash)
@@ -153,3 +170,7 @@ class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
         registration_data = self._get_data_unsafe(registration_token)
         path = registration_data["path"]
         self.assertRegexpMatches(path, LEDGER_BASE_PATH + "(/\\d{1,10}'){3}")
+
+    def testRegistrationSucceeds(self):
+        response = self._register_new_wallet(self.base_address_hash, self.new_wallet)
+        self.assertEqual(response, self.base_address_hash)
