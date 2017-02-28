@@ -57,7 +57,7 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
         x_y_path = path[len(BASE_PATH) + 1:]
         y_path = "/".join(x_y_path.split('/')[3:])
         address = x_wallet.get_child_for_path(y_path).to_address()
-        return self._solve_challenge(signed_challenge, address)
+        return self._solve_challenge(signed_challenge, address).decode("utf-8")
 
     @staticmethod
     def _timestamp(time):
