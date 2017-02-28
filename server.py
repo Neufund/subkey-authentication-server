@@ -18,7 +18,7 @@ app.config.from_pyfile('config.py')
 def start_registration():
     base_address_hash = request.get_json()["base_address_hash"]
     x1, x2, x3 = randint(0, 2 ** 31), randint(0, 2 ** 31), randint(0, 2 ** 31)
-    xPath = "{}/{}/{}".format(x1, x2, x3)
+    xPath = "{}'/{}'/{}'".format(x1, x2, x3)
     challenge_data = {
         "base_address_hash": base_address_hash,
         "path": "{}/{}".format(app.config["LEDGER_BASE_PATH"], xPath)
