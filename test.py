@@ -17,15 +17,11 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
         app.config["DB_NAME"] = TEST_DB
-        self.base_address_hash = "01b0021097fc768ec42c1828be5131e18b479ab210224122e467f144018396df"
-        test_data = db.get(self.base_address_hash)
-        self.x_wallet = Wallet(chain_code=test_data["chainCode"],
-                               public_key=PublicKey.from_hex_key(test_data["pubKey"]))
 
-    def _request_challenge(self):
+    def _request_challenge(self, base_address_hash):
         return self.app.post(
             '/challenge',
-            data=json.dumps({"base_address_hash": self.base_address_hash}),
+            data=json.dumps({"base_address_hash": base_address_hash}),
             content_type='application/json'
         ).data
 
@@ -53,14 +49,14 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
             'verify_aud': False
         })
 
-    def _login(self):
-        signed_challenge = self._request_challenge()
+    def _login(self, base_address_hash, x_wallet):
+        signed_challenge = self._request_challenge(base_address_hash)
         challenge = self._get_data_unsafe(signed_challenge)
         path = challenge["path"]
         self.assertEqual(path[:len(BASE_PATH)], BASE_PATH)
         x_y_path = path[len(BASE_PATH) + 1:]
         y_path = "/".join(x_y_path.split('/')[3:])
-        address = self.x_wallet.get_child_for_path(y_path).to_address()
+        address = x_wallet.get_child_for_path(y_path).to_address()
         return self._solve_challenge(signed_challenge, address)
 
     @staticmethod
@@ -69,8 +65,15 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
 
 
 class ChallengeResponseTests(LedgerJWTServerTestsBase):
+    def setUp(self):
+        super(ChallengeResponseTests, self).setUp()
+        self.base_address_hash = "01b0021097fc768ec42c1828be5131e18b479ab210224122e467f144018396df"
+        test_data = db.get(self.base_address_hash)
+        self.x_wallet = Wallet(chain_code=test_data["chainCode"],
+                               public_key=PublicKey.from_hex_key(test_data["pubKey"]))
+
     def testChallenge(self):
-        signed_challenge = self._request_challenge()
+        signed_challenge = self._request_challenge(self.base_address_hash)
         header = jwt.get_unverified_header(signed_challenge)
         challenge = self._get_data_unsafe(signed_challenge)
         self.assertEqual(header["alg"], "HS512")
@@ -80,7 +83,7 @@ class ChallengeResponseTests(LedgerJWTServerTestsBase):
         self.assertIn("path", challenge)
 
     def testChallengeTimeout(self):
-        signed_challenge = self._request_challenge()
+        signed_challenge = self._request_challenge(self.base_address_hash)
         challenge = self._get_data_unsafe(signed_challenge)
         # Actual timeout is 60 seconds
         now_plus_55_sec = self._timestamp(datetime.now() + timedelta(seconds=55))
@@ -88,14 +91,14 @@ class ChallengeResponseTests(LedgerJWTServerTestsBase):
         self.assertIn(challenge["exp"], range(now_plus_55_sec, now_plus_65_sec))
 
     def testChallengeResponse(self):
-        signed_token = self._login()
+        signed_token = self._login(self.base_address_hash, self.x_wallet)
         header = jwt.get_unverified_header(signed_token)
         token = self._get_data_unsafe(signed_token)
         self.assertEqual(header["alg"], "ES512")
         self.assertEqual(token['aud'], "MS2")
 
     def testTokenTimeout(self):
-        signed_token = self._login()
+        signed_token = self._login(self.base_address_hash, self.x_wallet)
         token = self._get_data_unsafe(signed_token)
         # Actual timeout is 30 minutes
         now_plus_25_min = self._timestamp(datetime.now() + timedelta(minutes=25))
@@ -103,5 +106,15 @@ class ChallengeResponseTests(LedgerJWTServerTestsBase):
         self.assertIn(token['exp'], range(now_plus_25_min, now_plus_35_min))
 
 
-class AdminTests(LedgerJWTServerTestsBase):
+class StateModifyingTestCaseMixin(unittest.TestCase):
+    def setUp(self):
+        super(StateModifyingTestCaseMixin, self).setUp()
+        self.initial_db_state = db.read()
+
+    def tearDown(self):
+        super(StateModifyingTestCaseMixin, self).tearDown()
+        db.write(self.initial_db_state)
+
+
+class AdminTests(LedgerJWTServerTestsBase, StateModifyingTestCaseMixin):
     pass
