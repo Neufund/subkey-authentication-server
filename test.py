@@ -1,3 +1,4 @@
+import hashlib
 import json
 import unittest
 from datetime import datetime, timedelta
@@ -7,6 +8,7 @@ from multimerchant.wallet import Wallet
 from multimerchant.wallet.keys import PublicKey
 
 import db
+from config import LEDGER_BASE_PATH
 from server import app
 
 BASE_PATH = "m/44'/60'/0'"
@@ -106,7 +108,7 @@ class ChallengeResponseTests(LedgerJWTServerTestsBase):
         self.assertIn(token['exp'], range(now_plus_25_min, now_plus_35_min))
 
 
-class StateModifyingTestCaseMixin(unittest.TestCase):
+class StateModifyingTestCaseMixin():
     def setUp(self):
         super(StateModifyingTestCaseMixin, self).setUp()
         self.initial_db_state = db.read()
@@ -116,7 +118,38 @@ class StateModifyingTestCaseMixin(unittest.TestCase):
         db.write(self.initial_db_state)
 
 
-class AdminTests(LedgerJWTServerTestsBase, StateModifyingTestCaseMixin):
-    def testDirty(self):
-        db.put("Leon", "Leon")
-        self.assertEqual(db.get("Leon"), "Leon")
+class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
+    def setUp(self):
+        super(AdminTests, self).setUp()
+        admin_base_address_hash = "01b0021097fc768ec42c1828be5131e18b479ab210224122e467f144018396df"
+        test_data = db.get(admin_base_address_hash)
+        admin_x_wallet = Wallet(chain_code=test_data["chainCode"],
+                                public_key=PublicKey.from_hex_key(test_data["pubKey"]))
+        self.token = self._login(admin_base_address_hash, admin_x_wallet)
+        self.new_wallet = Wallet.new_random_wallet().get_child_for_path(LEDGER_BASE_PATH)
+        self.base_address_hash = hashlib.sha3_256(
+            self.new_wallet.to_address().encode("utf-8")).hexdigest()
+
+    def _start_registration(self, token, base_address_hash):
+        return self.app.post(
+            '/start_registration',
+            data=json.dumps({"base_address_hash": base_address_hash}),
+            headers={"Authorization": "JWT {}".format(token)},
+            content_type='application/json'
+        ).data
+
+    def testStartRegistrationToken(self):
+        registration_token = self._start_registration(self.token, self.base_address_hash)
+        header = jwt.get_unverified_header(registration_token)
+        registration_data = self._get_data_unsafe(registration_token)
+        self.assertEqual(header["alg"], "HS512")
+        self.assertEqual(registration_data["aud"], "Registration")
+        self.assertEqual(registration_data["iss"], "Neufund")
+        self.assertEqual(registration_data["base_address_hash"], self.base_address_hash)
+        self.assertIn("path", registration_data)
+
+    def testStartRegistrationPath(self):
+        registration_token = self._start_registration(self.token, self.base_address_hash)
+        registration_data = self._get_data_unsafe(registration_token)
+        path = registration_data["path"]
+        self.assertRegexpMatches(path, LEDGER_BASE_PATH + "(/\\d{1,10}'){3}")
