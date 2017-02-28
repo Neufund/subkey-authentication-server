@@ -10,7 +10,7 @@ def read():
 def write(data):
     from server import app
     with open(app.config["DB_NAME"], "w") as f:
-        f.write(json.dumps(data))
+        f.write(json.dumps(data, indent=2))
 
 
 def get(key):
