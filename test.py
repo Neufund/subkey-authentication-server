@@ -117,4 +117,6 @@ class StateModifyingTestCaseMixin(unittest.TestCase):
 
 
 class AdminTests(LedgerJWTServerTestsBase, StateModifyingTestCaseMixin):
-    pass
+    def testDirty(self):
+        db.put("Leon", "Leon")
+        self.assertEqual(db.get("Leon"), "Leon")
