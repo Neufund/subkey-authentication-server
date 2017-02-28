@@ -49,15 +49,17 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
             'verify_aud': False
         })
 
-    def _login(self, base_address_hash, x_wallet):
+    def _login(self, base_address_hash, x_wallet=None, wallet=None):
         signed_challenge = self._request_challenge(base_address_hash)
         challenge = self._get_data_unsafe(signed_challenge)
         path = challenge["path"]
-        self.assertEqual(path[:len(BASE_PATH)], BASE_PATH)
-        x_y_path = path[len(BASE_PATH) + 1:]
-        y_path = "/".join(x_y_path.split('/')[3:])
-        address = x_wallet.get_child_for_path(y_path).to_address()
-        return self._solve_challenge(signed_challenge, address)
+        if wallet:
+            child = wallet.get_child_for_path(path)
+        else:
+            x_y_path = path[len(BASE_PATH) + 1:]
+            y_path = "/".join(x_y_path.split('/')[3:])
+            child = x_wallet.get_child_for_path(y_path)
+        return self._solve_challenge(signed_challenge, child.to_address())
 
     @staticmethod
     def _timestamp(time):
@@ -91,14 +93,14 @@ class ChallengeResponseTests(LedgerJWTServerTestsBase):
         self.assertIn(challenge["exp"], range(now_plus_55_sec, now_plus_65_sec))
 
     def testChallengeResponse(self):
-        signed_token = self._login(self.base_address_hash, self.x_wallet)
+        signed_token = self._login(self.base_address_hash, x_wallet=self.x_wallet)
         header = jwt.get_unverified_header(signed_token)
         token = self._get_data_unsafe(signed_token)
         self.assertEqual(header["alg"], "ES512")
         self.assertEqual(token['aud'], "MS2")
 
     def testTokenTimeout(self):
-        signed_token = self._login(self.base_address_hash, self.x_wallet)
+        signed_token = self._login(self.base_address_hash, x_wallet=self.x_wallet)
         token = self._get_data_unsafe(signed_token)
         # Actual timeout is 30 minutes
         now_plus_25_min = self._timestamp(datetime.now() + timedelta(minutes=25))
@@ -123,7 +125,7 @@ class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
         test_data = db.get(admin_base_address_hash)
         admin_x_wallet = Wallet(chain_code=test_data["chainCode"],
                                 public_key=PublicKey.from_hex_key(test_data["pubKey"]))
-        self.token = self._login(admin_base_address_hash, admin_x_wallet)
+        self.token = self._login(admin_base_address_hash, x_wallet=admin_x_wallet)
         self.new_wallet = Wallet.new_random_wallet()
         base_address = self.new_wallet \
             .get_child_for_path(LEDGER_BASE_PATH) \
@@ -174,3 +176,7 @@ class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
     def testRegistrationSucceeds(self):
         response = self._register_new_wallet(self.base_address_hash, self.new_wallet)
         self.assertEqual(response, self.base_address_hash)
+
+    def testLoginAfterRegistration(self):
+        self._register_new_wallet(self.base_address_hash, self.new_wallet)
+        self._login(self.base_address_hash, wallet=self.new_wallet)
