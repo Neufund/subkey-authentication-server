@@ -3,7 +3,7 @@ import string
 from datetime import timedelta
 
 LEDGER_BASE_PATH = "m/44'/60'/0'"
-DB_NAME = 'main.db'
+DB_NAME = 'test-ledger.json'
 REGISTRATION_ALGORITHM = 'HS512'
 CHALLENGE_ALGORITHM = 'HS512'
 LOGIN_ALGORITHM = 'ES512'
