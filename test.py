@@ -10,9 +10,17 @@ from multimerchant.wallet.keys import PublicKey
 import db
 from config import LEDGER_BASE_PATH
 from server import app
+from utils import pub_to_addr, wallet_to_addr
 
-BASE_PATH = "m/44'/60'/0'"
 TEST_DB = "test.json"
+
+
+class UtilsTestCase(unittest.TestCase):
+    def testPubToAddr(self):
+        pub_key = "04d3c41fb2f0e07d71f10416717e450bceb635d54d9b07dea0327f90bfa82f0da" \
+                  "08b40aafd480811d4aba8c17fa768765c6a897009e000f9249c299724fd567414"
+        address = "0x670884349dd0e57bd1bb71bb6913e921846ba149"
+        self.assertEqual(pub_to_addr(pub_key), address)
 
 
 class LedgerJWTServerTestsBase(unittest.TestCase):
@@ -56,10 +64,11 @@ class LedgerJWTServerTestsBase(unittest.TestCase):
         if wallet:
             child = wallet.get_child_for_path(path)
         else:
-            x_y_path = path[len(BASE_PATH) + 1:]
+            x_y_path = path[len(LEDGER_BASE_PATH) + 1:]
             y_path = "/".join(x_y_path.split('/')[3:])
             child = x_wallet.get_child_for_path(y_path)
-        return self._solve_challenge(signed_challenge, child.to_address())
+        address = wallet_to_addr(child)
+        return self._solve_challenge(signed_challenge, address)
 
     @staticmethod
     def _timestamp(time):
@@ -127,10 +136,8 @@ class AdminTests(StateModifyingTestCaseMixin, LedgerJWTServerTestsBase):
                                 public_key=PublicKey.from_hex_key(test_data["pubKey"]))
         self.token = self._login(admin_base_address_hash, x_wallet=admin_x_wallet)
         self.new_wallet = Wallet.new_random_wallet()
-        base_address = self.new_wallet \
-            .get_child_for_path(LEDGER_BASE_PATH) \
-            .to_address().encode("utf-8")
-        self.base_address_hash = hashlib.sha3_256(base_address).hexdigest()
+        base_address = wallet_to_addr(self.new_wallet.get_child_for_path(LEDGER_BASE_PATH))
+        self.base_address_hash = hashlib.sha3_256(base_address.encode("utf-8")).hexdigest()
 
     def _start_registration(self, token, base_address_hash):
         return self.app.post(

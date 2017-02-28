@@ -8,6 +8,7 @@ from werkzeug.exceptions import Unauthorized
 
 import auth
 import db
+from utils import wallet_to_addr
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
@@ -60,7 +61,7 @@ def _solve_challenge(address, path):
     x_wallet = Wallet(chain_code=user_data["chainCode"],
                       public_key=PublicKey.from_hex_key(user_data["pubKey"]))
     y_path = "/".join(path.split("/")[-3:])
-    return x_wallet.get_child_for_path(y_path).to_address()
+    return wallet_to_addr(x_wallet.get_child_for_path(y_path))
 
 
 @app.route('/response', methods=['POST'])
